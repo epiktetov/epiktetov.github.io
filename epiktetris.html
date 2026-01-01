@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Epiktetris 31-Dec-2025</title>
+  <style>
+    :root {
+      --bg-color: #fff8f0; --text: #000000;
+      --ui-bg:    #fff0d5;
+      --accent:   #e67e22; /* rust orange */
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color:            var(--text);
+      display: flex;
+      flex-direction:  column;
+      align-items:     center;  height: 100vh;  overflow:   hidden;
+      justify-content: center;  margin:     0;  user-select:  none;
+    }
+    canvas {
+      display: block;
+      background-color: #d0d0d0;
+      border:    2px solid #555;
+    }
+    #game-container {
+      display: flex;   position:   relative;
+      gap:     20px; background:    #e0e0e0;
+      padding: 20px; border: 4px solid #444;
+      box-shadow: 0 0 20px rgba(0,0,0, 0.8);
+    }
+    #ui-panel {
+      display: flex;           gap:    15px;
+      flex-direction: column;  width: 150px;
+    }
+    .panel-box {
+      background: var(--ui-bg);  padding:      10px;
+      border:   2px solid #555;  text-align: center;
+    }
+    h2 {
+      font-size: 0.9rem;  color:          #888;
+      margin: 0 0 5px 0;  letter-spacing:  1px;
+    }
+    .value {
+       font-size: 1.5rem;
+       font-weight: bold; color: var(--accent);
+    }
+    .icon-large {
+      font-size: 1.5rem;  color: #3498db;
+      font-weight: bold;  line-height: 1;
+    }
+    .key-hint {
+      font-size: 0.7rem;
+      color:       #aaa;  border: 1px solid #aaa;
+      margin-top:   5px;  border-radius:     4px;
+      padding:  2px 6px;  display:  inline-block;
+    }
+    #overlay {
+      top: 0; left: 0; width: 100%; height: 100%;
+      position: absolute;
+      background: rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      justify-content:   top;   z-index:   10;
+      align-items:    center;   display: none;
+    }
+    #overlay h1 {
+      font-size: 2rem;  text-transform: uppercase;
+      margin: 0;        color:      var(--accent);
+      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    }
+    #overlay p {
+      font-size: 1.2rem;           color: #e0e0e0;
+      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    }
+    .controls-hint {
+      font-size: 0.8rem;  color:     #a0a0a0;
+      margin-top:  10px;  text-align: center;
+    }
+    .game-hint {
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 0.8rem;           color:     #a0a0a0;
+      margin-top:  10px;           text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="tetris" width="300" height="600"></canvas>
+    <div id="ui-panel">
+      <div class="panel-box">
+        <h2>Next</h2>
+        <canvas id="next" width="100" height="120"></canvas>
+      </div>
+      <div class="panel-box">
+        <h2>Swap</h2>
+        <div class="key-hint">Press Q</div>
+      </div>
+      <div class="panel-box" id="mirror-box">
+        <h2>Mirror / flip</h2>
+        <div class="icon-large">⇄</div>
+        <div class="key-hint">Press Z</div>
+      </div>
+      <div class="panel-box">
+        <h2>Score</h2>
+        <div id="score" class="value">0</div>
+      </div>
+      <div class="panel-box">
+        <h2>Level</h2>
+        <div id="level" class="value">1</div>
+      </div>
+      <div class="game-hint" id="next-type">X</div>
+    </div>
+    <div id="overlay">
+      <h1 id="overlay-title">PAUSED</h1>
+      <p id="overlay-msg">...</p>
+    </div>
+  </div>
+  <div class="controls-hint">
+    WASD/arrows: move/rotate | Q/del: swap | Z/end: mirror | space: drop | F1/esc: pause
+  </div>
+  <script>
+
+const canvas      = document.getElementById('tetris');
+const nextCanvas  = document.getElementById('next');
+const context     =     canvas.getContext('2d');
+const nextContext = nextCanvas.getContext('2d');
+const COLS = 12;          context.scale(25, 25);
+const ROWS = 24;      nextContext.scale(20, 20);
+let score   = 0;
+let lastTime = 0;        let isGameOver = false;
+let dropCounter = 0;     let isPaused   = false;
+let dropInterval = 1200; let canMirror  =  true;
+
+const Pieces = 'hijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXY';
+const Colors = {};
+const Shapes = {
+  'h': [[-1,-1], [-1,0], [0,0], [ 0,1]],
+  'i': [[ 0,-1], [0, 0], [0,1], [ 0,2]],
+  'j': [[ 0,-1], [0, 0], [0,1], [-1,1]],
+  'k': [[ 0,-1], [0, 0], [0,1], [ 1,0]],
+  'l': [[ 0,-1], [0, 0], [0,1], [ 1,1]],
+  'm': [[-1, 0], [0, 0],[-1,1], [ 0,1]],
+  'n': [[ 0, 0], [0, 1], [1,0], [1,-1]],
+
+  'o': [[ 0,-2], [ 0,-1], [0, 0], [0,1], [ 0, 2]],
+  'p': [[-1,-1], [-1, 0], [0,-1], [0,0], [-1, 1]],
+  'q': [[ 0,-1], [ 0, 0], [0, 1], [0,2], [ 1, 2]],
+  'r': [[ 0,-1], [ 1,-1], [0, 0],[-1,0], [ 0, 1]],
+  's': [[ 0,-1], [ 0, 0], [0, 1], [1,1], [ 1, 2]],
+  't': [[-1,-1], [ 0,-1], [1,-1], [0,0], [ 0, 1]],
+  'u': [[-1, 0], [-1, 1], [0, 1], [1,1], [ 1, 0]],
+  'v': [[-1,-1], [-1, 0], [-1,1],[0,-1], [ 1,-1]],
+  'w': [[-1,-1], [-1, 0], [0, 0], [0,1], [ 1, 1]],
+  'x': [[ 0,-1], [-1, 0], [0, 0], [1,0], [ 0, 1]],
+  'y': [[ 0,-1], [ 0, 0], [0, 1], [0,2], [-1, 0]],
+  'z': [[-1,-1], [ 0,-1], [0, 0], [0,1], [ 1, 1]],
+
+  '0': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 0, 3]],
+  '1': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1,-1]],
+  '2': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1,-2]],
+  '3': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1, 0]],
+  '4': [[-1,-1], [-1, 0], [-1, 1], [0, 0], [ 1,-1], [ 1, 0]],
+  '5': [[-1, 1], [-1, 2], [ 0,-1], [0, 0], [ 0, 1], [ 1,-1]],
+  '6': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 1], [ 1, 0]],
+  '7': [[-1, 1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 0]],
+  '8': [[-1,-1], [-1, 0], [-1, 1],[-1, 2], [ 0, 0], [ 1, 0]],
+  '9': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 0], [ 1,-1]],
+  'A': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 1], [ 1,-1]],
+  'B': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-1], [ 1, 0], [ 1, 1]],
+  'C': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 2]],
+  'D': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 0], [-1, 1]],
+  'E': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 0, 2]],
+  'F': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 1]],
+  'G': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 1, 0]],
+  'H': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-2], [ 1,-1], [ 1, 0]],
+  'I': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1,-2], [-1,-1]],
+  'J': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  'K': [[-1, 0], [-1, 1], [ 0,-1], [0, 0], [ 0, 1], [ 1, 0]],
+  'L': [[-1,-1], [ 0,-1], [ 1,-1], [1, 0], [ 1, 1], [ 1, 2]],
+  'M': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 1,-1]],
+  'N': [[-1, 0], [-1, 1], [-1, 2], [0, 0], [ 1,-1], [ 1, 0]],
+  'O': [[ 0,-1], [ 0, 0], [ 0, 1], [1,-1], [ 1, 0], [ 1, 1]],
+  'P': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1,-1], [-1, 0]],
+  'Q': [[-1, 0], [-1, 1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  'R': [[-1, 0], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 0]],
+  'S': [[-1, 2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-1]],
+  'T': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-1]],
+  'U': [[-1,-1], [-1, 0], [-1, 1], [0,-1], [ 1,-1], [ 1, 0]],
+  'V': [[-1,-1], [-1, 0], [-1, 1], [0, 0], [ 0, 1], [ 1, 1]],
+  'W': [[-1, 1], [-1, 2], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  'X': [[-1, 0], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1, 0]],
+  'Y': [[-1,-1], [-1, 0], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+};
+let nextPieceType = null;
+let Bag = '';
+let bagCount = 0;
+
+function initColors()
+{
+  let deltaHue = 20
+  let hue = 0;
+  for (const x of Pieces) {
+    if (x === '0') { hue = 180; deltaHue = 19; }
+         if (Shapes[x].length === 6) Colors[x] = { 'H':hue, 'S':70, 'L':70 };
+    else if (Shapes[x].length === 5) Colors[x] = { 'H':hue, 'S':80, 'L':50 };
+    else                             Colors[x] = { 'H':hue, 'S':90, 'L':40 };
+    hue += deltaHue;
+  }
+}
+function nextPieceFromBag()
+{
+  if (Bag.length === 0) {
+    const shuffle = str => [...str].sort(() => Math.random()-0.5).join('');
+//          Bag = 'hijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY';
+    Bag = shuffle('hijklmnopqrstuvwxyz'+'0123456789ABCDEFGH'+
+                  'hijklmnopqrstuvwxyz'+'IJKLMNOPQRSTUVWXY');
+    bagCount++;
+//  dropInterval = Math.max(250, 1250 - (bagCount * 50));
+  }
+  const nextPiece = Bag[0];
+  Bag =       Bag.slice(1); return nextPiece;
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+function createMatrix(w, h)
+{
+  const         matrix =                       [];
+  while (h--) { matrix.push(new Array(w).fill(0)); }
+  return matrix;
+}
+const arena = createMatrix(COLS, ROWS);
+const brick = {
+  pos: {x: 0, y: 0},
+  type:   null,
+  matrix: null,
+};
+function createPiece(type)
+{
+  const coords =       Shapes[type];
+  const matrix = createMatrix(6, 6);
+  coords.forEach(c => { matrix[c[1]+2][c[0]+2] = type; });
+  return matrix;
+}
+function drawMatrix(matrix, offset, isArena, ctx = context)
+{
+  matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        let H = Colors[value].H;
+        let S = Colors[value].S;
+        let L = Colors[value].L;
+        if (isArena) { S *= 0.4; L *= 1.2; }
+        ctx.fillStyle = `hsl(${H},${S}%,${L}%)`;
+        ctx.fillRect(x+offset.x, y+offset.y, 1, 1);
+
+        ctx.lineWidth = 0.05;
+        ctx.strokeStyle = `hsl(${H},${S}%,20%)`;
+        ctx.strokeRect(x+offset.x, y+offset.y, 1, 1);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillRect(x+offset.x, y+offset.y,     1, 0.1);
+        ctx.fillRect(x+offset.x, y+offset.y+0.1, 0.1, 1);
+      }
+      else {
+        ctx.lineWidth = 0.01;
+        ctx.strokeStyle = 'rgba(220,200,180,1)';
+        ctx.strokeRect(x+offset.x+0.1, y+offset.y+0.1, 0.8, 0.8);
+      }
+    });
+  });
+}
+function draw()
+{
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  drawMatrix(arena,     {x: 0, y: 0},  true);
+  drawMatrix(brick.matrix, brick.pos, false);
+}
+function drawNext()
+{
+  nextContext.fillStyle = '#ffffff';
+  nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+  const matrix = createPiece(nextPieceType);
+  drawMatrix(matrix, {x: 0, y: 0}, false, nextContext);
+  let bagHint = Bag;
+  if (bagHint.length > 9) bagHint = bagHint.slice(0,8)+"..";
+  const hint = `${brick.type}(${nextPieceType})${bagHint}`;
+  document.getElementById('next-type').innerText =     hint;
+}
+function collide(arena, brick)
+{
+  const m = brick.matrix;
+  const o = brick.pos;
+  for (let y = 0; y < m.length; ++y) {
+    for (let x = 0; x < m[y].length; ++x) {
+      if (m[y][x]                                !== 0
+        && (arena[y+o.y] && arena[y+o.y][x+o.x]) !== 0) { return true; }
+    }
+  }
+  return false;
+}
+function merge(arena, brick)
+{
+  brick.matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) { arena[y + brick.pos.y][x + brick.pos.x] = value; }
+    });
+  });
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+function doesntFit()
+{
+  let offset = 1;
+  while (collide(arena, brick)) {
+    brick.pos.x += offset;
+    offset = -(offset + (offset > 0 ? 1 : -1));
+    if (offset > 5) { return true; }
+  }
+  return false;
+}
+function rotate(matrix, dir)
+{
+  for (let y = 0; y < matrix.length; ++y) {
+    for (let x = 0; x < y; ++x) {
+      [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+    }
+  }
+  if (dir > 0) matrix.forEach(row => row.reverse());
+  else         matrix.reverse();
+}
+function brickRotate(dir)
+{
+  const pos  =  brick.pos.x;
+  rotate(brick.matrix, dir);
+  if (doesntFit()) { rotate(brick.matrix, -dir);
+                     brick.pos.x = pos;        }
+}
+function mirror(matrix)
+{
+  matrix.forEach(row => row.reverse());
+}
+function brickMirror()
+{
+  if (!canMirror)  return;
+  const pos = brick.pos.x;
+  mirror(brick.matrix);
+  if (doesntFit()) { mirror(brick.matrix);
+                     brick.pos.x = pos;  }
+}
+function updateCanMirror()
+{
+  canMirror =            (Shapes[brick.type].length > 4);
+  const panelBox = document.getElementById('mirror-box');
+  panelBox.style.opacity =    canMirror ? '1.0' : '0.25';
+}
+function brickSwap()
+{
+  const currentMatrix = brick.matrix;
+  const currentType   = brick.type;
+  brick.type   =              nextPieceType;
+  brick.matrix = createPiece(nextPieceType);
+  if (doesntFit()) {
+    brick.matrix = currentMatrix;
+  }
+  else { nextPieceType = currentType;
+         drawNext();
+         updateCanMirror();         }
+}
+function brickDrop()
+{
+  if (isPaused || isGameOver) return;  brick.pos.y++;
+  if (collide(arena, brick)) {         brick.pos.y--;
+    merge(arena, brick);
+    brickReset();
+  }
+  dropCounter = 0;
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+function brickReset()
+{
+  if (nextPieceType === null) nextPieceType = nextPieceFromBag();
+  brick.type   = nextPieceType;
+  brick.matrix = createPiece(brick.type);
+  nextPieceType = nextPieceFromBag();
+  updateCanMirror();
+  drawNext();
+  brick.pos.y = 0;
+  brick.pos.x = (arena[0].length / 2 | 0) - (brick.matrix[0].length / 2 | 0);
+
+  if (collide(arena, brick)) {
+    isGameOver = true;
+    const overlay = document.getElementById('overlay');
+    document.getElementById('overlay-title').innerText = "GAME OVER";
+    document.getElementById('overlay-msg').innerText = "Use 'Reload Page' command (F5 or ⌘R) to restart";
+    overlay.style.display = 'flex';
+    overlay.style.background = 'rgba(0,0,0, 0.5)';  return;
+  }
+  let rowCount = 0; // collapse filled rows
+outer:
+  for (let y = arena.length-1; y > 0; --y) {
+    for (let x = 0; x < arena[y].length; ++x) {
+      if (arena[y][x] === 0) continue outer;
+    }
+    const row = arena.splice(y, 1)[0].fill(0);
+    arena.unshift(row);    ++y;    rowCount++;
+  }
+  if (rowCount > 0) score += rowCount;
+
+  document.getElementById('score').innerText = score;
+  document.getElementById('level').innerText = bagCount;
+}
+function togglePause()
+{
+  if (isGameOver) return;      isPaused = ! isPaused;
+  const overlay = document.getElementById('overlay');
+  if (isPaused) {
+    document.getElementById('overlay-title').innerText = "PAUSED";
+    document.getElementById('overlay-msg').innerText = "";
+    overlay.style.display = 'flex';
+    overlay.style.background = 'rgba(0,0,0, 0.0)'; // transparent
+  }
+  else { overlay.style.display = 'none'; update(); }
+}
+function update(time = 0)
+{
+  if (isPaused) return;
+  const deltaTime = time - lastTime;                    lastTime = time;
+  dropCounter += deltaTime; if (dropCounter > dropInterval) brickDrop();
+  draw();
+  requestAnimationFrame(update);
+}
+document.addEventListener('keydown', event =>
+{
+  if (isGameOver) return;
+  if (event.keyCode === 27 || event.keyCode === 112) { // ESC or F1
+      togglePause();
+      return;
+  }
+  else if (isPaused) { togglePause(); } // no return
+// - - - - - - - - - - - - - - - - - - - - - - - - -
+  if (event.keyCode === 32) { // Space (hard drop)
+    while(!collide(arena, brick)) brick.pos.y++;
+                                  brick.pos.y--;
+    merge(arena, brick);
+    brickReset();
+    dropCounter = 0;
+  }
+  else if (event.keyCode === 37    // Left
+        || event.keyCode === 65) { // A
+    brick.pos.x--;
+    if (collide(arena, brick)) brick.pos.x++;
+  }
+  else if (event.keyCode === 39    // Right
+        || event.keyCode === 68) { // D
+    brick.pos.x++;
+    if (collide(arena, brick)) brick.pos.x--;
+  }
+  else if (event.keyCode === 38    // Up
+        || event.keyCode === 87) { // W
+    brickRotate(-1);
+    event.preventDefault();
+  }
+  else if (event.keyCode === 40    // Down
+        || event.keyCode === 83) { // S
+    brickDrop();
+    event.preventDefault();
+  }
+  else if (event.keyCode === 35     // End
+        || event.keyCode === 90     // Z
+        || event.keyCode === 220) { // \ (mirror)
+    brickMirror();
+    event.preventDefault();
+  }
+  else if (event.keyCode === 8     // backspace
+        || event.keyCode === 81    // Q
+        || event.keyCode === 46) { // Del (swap)
+    brickSwap();
+    event.preventDefault();
+  }
+
+});
+initColors();
+brickReset(); update();
+
+  </script>
+</body>
+</html>
