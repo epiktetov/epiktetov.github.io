@@ -3,15 +3,14 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="UTF-8">
-  <title>Epiktetris 31-Dec-2025</title>
+  <title>Epiktetris</title><!-- Sat Jan 3 12:30 2026 -->
   <style>
     :root {
-      --bg-color: #fff8f0; --text: #000000;
-      --ui-bg:    #fff0d5;
-      --accent:   #e67e22; /* rust orange */
+      --bg-color: #ffffff; --text:   #000000;
+      --ui-bg:    #fff0d5; --accent: #e67e22;
     }
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: Arial, Helvetica, Verdana, sans-serif;
       background-color: var(--bg-color);
       color:            var(--text);
       display: flex;
@@ -86,7 +85,7 @@
   </style>
 </head>
 <body>
-  <div id="game-container">
+  <div id="game-container" tabindex="-1">
     <canvas id="tetris" width="300" height="600"></canvas>
     <div id="ui-panel">
       <div class="panel-box">
@@ -128,10 +127,10 @@ const context     =     canvas.getContext('2d');
 const nextContext = nextCanvas.getContext('2d');
 const COLS = 12;          context.scale(25, 25);
 const ROWS = 24;      nextContext.scale(20, 20);
-let score   = 0;
-let lastTime = 0;        let isGameOver = false;
+let score   = 0;         let canMirror  =  true;
+let lastTime = 0;        let speedUp    = false;
 let dropCounter = 0;     let isPaused   = false;
-let dropInterval = 1200; let canMirror  =  true;
+let dropInterval = 1200; let isGameOver = false;
 
 const Pieces = 'hijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXY';
 const Colors = {};
@@ -194,10 +193,11 @@ const Shapes = {
   'Y': [[-1,-1], [-1, 0], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
 };
 let nextPieceType = null;
+let bagContent = '';
 let Bag = '';
 let bagCount = 0;
 
-function initColors()
+function initBricks()
 {
   let deltaHue = 20
   let hue = 0;
@@ -208,16 +208,28 @@ function initColors()
     else                             Colors[x] = { 'H':hue, 'S':90, 'L':40 };
     hue += deltaHue;
   }
+  const params = window.location;
+  const sp = new URLSearchParams(params.search);
+  if (sp.has('bag')) bagContent = sp.get('bag');
+  if (sp.has('set')) {
+    for (const x of sp.get('set')) {
+           if (x === '4') bagContent += 'hijklmn';
+      else if (x === '5') bagContent += 'opqrstuvwxyz';
+      else if (x === '6') bagContent += '0123456789ABCDEFGHIJKLMNOPQRSTUVWXY';
+  } }
+  if (bagContent.length === 0) {
+      bagContent = 'hijklmnopqrstuvwxyz'+'0123456789ABCDEFGH'+
+                   'hijklmnopqrstuvwxyz'+ 'IJKLMNOPQRSTUVWXY';
+  }
+  speedUp = sp.has('su');
+  console.log(`bag=${bagContent};su=${speedUp}`);
 }
 function nextPieceFromBag()
 {
   if (Bag.length === 0) {
     const shuffle = str => [...str].sort(() => Math.random()-0.5).join('');
-//          Bag = 'hijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY';
-    Bag = shuffle('hijklmnopqrstuvwxyz'+'0123456789ABCDEFGH'+
-                  'hijklmnopqrstuvwxyz'+'IJKLMNOPQRSTUVWXY');
-    bagCount++;
-//  dropInterval = Math.max(250, 1250 - (bagCount * 50));
+    Bag = shuffle(bagContent);                        bagCount++;
+    if (speedUp) dropInterval = Math.max(250,1250-(50*bagCount));
   }
   const nextPiece = Bag[0];
   Bag =       Bag.slice(1); return nextPiece;
@@ -285,8 +297,8 @@ function drawNext()
   drawMatrix(matrix, {x: 0, y: 0}, false, nextContext);
   let bagHint = Bag;
   if (bagHint.length > 9) bagHint = bagHint.slice(0,8)+"..";
-  const hint = `${brick.type}(${nextPieceType})${bagHint}`;
-  document.getElementById('next-type').innerText =     hint;
+  const hints = `${brick.type}(${nextPieceType})${bagHint}`;
+  document.getElementById('next-type').innerText = hints;
 }
 function collide(arena, brick)
 {
@@ -424,8 +436,8 @@ function togglePause()
 }
 function update(time = 0)
 {
-  if (isPaused) return;
-  const deltaTime = time - lastTime;                    lastTime = time;
+  if (isPaused) return;               const deltaTime = time - lastTime;
+                                                        lastTime = time;
   dropCounter += deltaTime; if (dropCounter > dropInterval) brickDrop();
   draw();
   requestAnimationFrame(update);
@@ -434,8 +446,8 @@ document.addEventListener('keydown', event =>
 {
   if (isGameOver) return;
   if (event.keyCode === 27 || event.keyCode === 112) { // ESC or F1
-      togglePause();
-      return;
+    togglePause();
+    event.preventDefault(); return;
   }
   else if (isPaused) { togglePause(); } // no return
 // - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -480,7 +492,7 @@ document.addEventListener('keydown', event =>
   }
 
 });
-initColors();
+initBricks();
 brickReset(); update();
 
   </script>

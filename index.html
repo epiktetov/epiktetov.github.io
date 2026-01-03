@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Epiktetov</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, Verdana, sans-serif;
+      background-color: #fff8f0;
+      padding:          20px;
+      box-sizing: border-box; // includes padding in the width calculation
+    }
+    .container {
+      max-width: 1000px; justify-content: center;
+      margin: 20px auto;          paddding: 20px;
+      display:     flex;     flex-direction: row;
+    }
+    .sidebar { margin-right: 20px; }
+    ul       { margin-top:    5px; }
+    h1 {
+      margin-top: 0;
+      text-align: right; color: #999060;
+    }
+    .grey { color: #707070; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <img src="sidebar250x525.jpg" width="250" height="525"/>
+    </aside>
+    <main>
+      <h1>Эпиктетов</h1>
+      <b>µMup07 version 18.5</b>  • macOS • Linux • Windows • see
+      <a href="micro-keys.html">micro-keys</a> for help
+      <p>
+      Source code: <a href="https://github.com/epiktetov/microMup07">
+                            https://github.com/epiktetov/microMup07</a></p>
+      Binaries:
+      <ul>
+      <li><a href="https://drive.google.com/file/d/1lnLJLn0ypM1pqC0jJsGYbk81WeJZssEz/view?usp=sharing">
+        macx-mim-18.5.zip</a>
+        <span class="grey">&nbsp;(for Intel x86-64 arch)</span></li>
+      <li><a href="https://drive.google.com/file/d/1BfLUuVMkoKfMrkaKhJJJI7CxvjZz-83K/view?usp=sharing">
+        win-mim-18.5.zip</a>
+        <span class="grey">&nbsp;(GCC runtime included)</span></li>
+      </ul>
+      <p>&nbsp;</p>
+      <p>
+      <b>Epiktetris.</b> Select game set by including one or more characters
+      from:
+      <tt>4</tt> (adds 7 one-sided tetrominos to the set),
+      <tt>5</tt> (adds 12 reversible pentominos) and
+      <tt>6</tt> (adds 35 reversible hexominos)
+      </p>
+      <form action="epiktetris.html">
+        <input type="text" name="set" value="45456"><br><br>
+        <input type="checkbox" name="su"> increase drop speed with level<br><br>
+        <input type="submit" value="Play">
+      </form>
+    </main>
+    </div>
+  </div>
+</body>
+</html>
