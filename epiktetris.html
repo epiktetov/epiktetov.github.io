@@ -3,7 +3,7 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="UTF-8">
-  <title>Epiktetris</title><!-- Sat Jan 3 12:30 2026 -->
+  <title>Epiktetris</title><!-- Tue Jan 6 17:25 2026 -->
   <style>
     :root {
       --bg-color: #fff8f0; --text:   #000000;
@@ -132,7 +132,7 @@ let lastTime = 0;        let speedUp    = false;
 let dropCounter = 0;     let isPaused   = false;
 let dropInterval = 1200; let isGameOver = false;
 
-const Pieces = 'hijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXY';
+const Pieces = 'hijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY';
 const Colors = {};
 const Shapes = {
   'h': [[-1,-1], [-1,0], [0,0], [ 0,1]],
@@ -147,52 +147,53 @@ const Shapes = {
   'p': [[-1,-1], [-1, 0], [0,-1], [0,0], [-1, 1]],
   'q': [[ 0,-1], [ 0, 0], [0, 1], [0,2], [ 1, 2]],
   'r': [[ 0,-1], [ 1,-1], [0, 0],[-1,0], [ 0, 1]],
-  's': [[ 0,-1], [ 0, 0], [0, 1], [1,1], [ 1, 2]],
+  's': [[-1,-1], [-1, 0], [0, 0], [0,1], [ 0, 2]],
   't': [[-1,-1], [ 0,-1], [1,-1], [0,0], [ 0, 1]],
   'u': [[-1, 0], [-1, 1], [0, 1], [1,1], [ 1, 0]],
-  'v': [[-1,-1], [-1, 0], [-1,1],[0,-1], [ 1,-1]],
+  'v': [[-1,-1], [-1, 0], [-1,1], [0,1], [ 1, 1]],
   'w': [[-1,-1], [-1, 0], [0, 0], [0,1], [ 1, 1]],
   'x': [[ 0,-1], [-1, 0], [0, 0], [1,0], [ 0, 1]],
   'y': [[ 0,-1], [ 0, 0], [0, 1], [0,2], [-1, 0]],
   'z': [[-1,-1], [ 0,-1], [0, 0], [0,1], [ 1, 1]],
 
-  '0': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 0, 3]],
+  '0': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1, 0]],
   '1': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1,-1]],
-  '2': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1,-2]],
-  '3': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1, 0]],
-  '4': [[-1,-1], [-1, 0], [-1, 1], [0, 0], [ 1,-1], [ 1, 0]],
-  '5': [[-1, 1], [-1, 2], [ 0,-1], [0, 0], [ 0, 1], [ 1,-1]],
-  '6': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 1], [ 1, 0]],
-  '7': [[-1, 1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 0]],
-  '8': [[-1,-1], [-1, 0], [-1, 1],[-1, 2], [ 0, 0], [ 1, 0]],
-  '9': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 0], [ 1,-1]],
+  '2': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  '3': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 1, 1], [ 1, 2]],
+  '4': [[-1,-1], [-1, 0], [ 0, 0], [1,-1], [ 1, 0], [ 1, 1]],
+  '5': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 1], [ 1, 0]],
+  '6': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 1, 0]],
+  '7': [[-2, 0], [-1, 0], [ 0, 0], [1, 0], [ 0, 1], [ 0, 2]],
+  '8': [[-1, 0], [-1, 1], [ 0,-1], [0, 0], [ 0, 1], [ 1, 0]],
+  '9': [[-1, 0], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 0]],
   'A': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 1], [ 1,-1]],
   'B': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-1], [ 1, 0], [ 1, 1]],
   'C': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 2]],
-  'D': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 0], [-1, 1]],
+  'D': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1, 0], [ 1, 1]],
   'E': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 0, 2]],
   'F': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 1]],
-  'G': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 1, 0]],
-  'H': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-2], [ 1,-1], [ 1, 0]],
-  'I': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1,-2], [-1,-1]],
-  'J': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
-  'K': [[-1, 0], [-1, 1], [ 0,-1], [0, 0], [ 0, 1], [ 1, 0]],
-  'L': [[-1,-1], [ 0,-1], [ 1,-1], [1, 0], [ 1, 1], [ 1, 2]],
+  'G': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-2], [ 1,-1], [ 1, 0]],
+  'H': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-2], [ 1,-1]],
+  'I': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 0, 3]],
+  'J': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-2]],
+  'K': [[-1, 0], [-1, 1], [ 0,-2], [0,-1], [ 0, 0], [ 1,-1]],
+  'L': [[-1,-2], [-1,-1], [-1, 0],[-1, 1], [ 0, 1], [ 1, 1]],
   'M': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 1,-1]],
   'N': [[-1, 0], [-1, 1], [-1, 2], [0, 0], [ 1,-1], [ 1, 0]],
-  'O': [[ 0,-1], [ 0, 0], [ 0, 1], [1,-1], [ 1, 0], [ 1, 1]],
+  'O': [[-1,-1], [-1, 0], [-1, 1], [0,-1], [ 0, 0], [ 0, 1]],
   'P': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1,-1], [-1, 0]],
   'Q': [[-1, 0], [-1, 1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
-  'R': [[-1, 0], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 0]],
+  'R': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 0], [ 1,-1]],
   'S': [[-1, 2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-1]],
   'T': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-1]],
   'U': [[-1,-1], [-1, 0], [-1, 1], [0,-1], [ 1,-1], [ 1, 0]],
   'V': [[-1,-1], [-1, 0], [-1, 1], [0, 0], [ 0, 1], [ 1, 1]],
-  'W': [[-1, 1], [-1, 2], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  'W': [[-2, 1], [-1, 0], [-1, 1], [0,-1], [ 0, 0], [ 1,-1]],
   'X': [[-1, 0], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1, 0]],
   'Y': [[-1,-1], [-1, 0], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
 };
-let nextPieceType = null;
+let nextPieceType   = null;
+let nextPieceMatrix = null;
 let bagContent = '';
 let Bag = '';
 let bagCount = 0;
@@ -202,7 +203,7 @@ function initBricks()
   let deltaHue = 20
   let hue = 0;
   for (const x of Pieces) {
-    if (x === '0') { hue = 180; deltaHue = 19; }
+    if (x === '0') { hue = -90; deltaHue = 11; }
          if (Shapes[x].length === 6) Colors[x] = { 'H':hue, 'S':70, 'L':70 };
     else if (Shapes[x].length === 5) Colors[x] = { 'H':hue, 'S':80, 'L':50 };
     else                             Colors[x] = { 'H':hue, 'S':90, 'L':40 };
@@ -293,8 +294,7 @@ function drawNext()
 {
   nextContext.fillStyle = '#ffffff';
   nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
-  const matrix = createPiece(nextPieceType);
-  drawMatrix(matrix, {x: 0, y: 0}, false, nextContext);
+  drawMatrix(nextPieceMatrix, {x: 0, y: 0}, false, nextContext);
   let bagHint = Bag;
   if (bagHint.length > 9) bagHint = bagHint.slice(0,8)+"..";
   const hints = `${brick.type}(${nextPieceType})${bagHint}`;
@@ -370,14 +370,16 @@ function brickSwap()
 {
   const currentMatrix = brick.matrix;
   const currentType   = brick.type;
-  brick.type   =              nextPieceType;
-  brick.matrix = createPiece(nextPieceType);
+  brick.type   = nextPieceType;
+  brick.matrix = nextPieceMatrix;
   if (doesntFit()) {
+    brick.type   = currentType;
     brick.matrix = currentMatrix;
   }
-  else { nextPieceType = currentType;
+  else { nextPieceType   = currentType;
+         nextPieceMatrix = currentMatrix;
          drawNext();
-         updateCanMirror();         }
+         updateCanMirror();             }
 }
 function brickDrop()
 {
@@ -391,10 +393,12 @@ function brickDrop()
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 function brickReset()
 {
-  if (nextPieceType === null) nextPieceType = nextPieceFromBag();
-  brick.type   = nextPieceType;
-  brick.matrix = createPiece(brick.type);
-  nextPieceType = nextPieceFromBag();
+  if (nextPieceType === null) { nextPieceType   =         nextPieceFromBag();
+                                nextPieceMatrix = createPiece(nextPieceType); }
+  brick.type = nextPieceType;
+  brick.matrix = nextPieceMatrix;
+  nextPieceType   =         nextPieceFromBag();
+  nextPieceMatrix = createPiece(nextPieceType);
   updateCanMirror();
   drawNext();
   brick.pos.y = 0;

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Polyominoes</title>
+  <style>
+    :root {
+      --bg-color: #fff8f0; --text:   #000000;
+      --ui-bg:    #fff0d5; --accent: #e67e22;
+    }
+    body {
+      font-family: Arial, Helvetica, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color:            var(--text);
+      display: flex;
+      flex-direction:  column;
+      align-items:     center;  height: 100vh;  overflow:   hidden;
+      justify-content: center;  margin:     0;  user-select:  none;
+    }
+    canvas {
+      display: block; background-color:             #ffffff;
+      padding:   5px; box-shadow: 0 0 20px rgba(0,0,0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="tetris" width="720" height="630"></canvas>
+  <script>
+
+const canvas  =             document.getElementById('tetris');
+const context = canvas.getContext('2d'); context.scale(15,15);
+const COLS = 12;
+const ROWS = 24;
+
+const Pieces = 'hijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY';
+const Colors = {};
+const Shapes = {
+  'h': [[-1,-1], [-1,0], [0,0], [ 0,1]],
+  'i': [[ 0,-1], [0, 0], [0,1], [ 0,2]],
+  'j': [[ 0,-1], [0, 0], [0,1], [-1,1]],
+  'k': [[ 0,-1], [0, 0], [0,1], [ 1,0]],
+  'l': [[ 0,-1], [0, 0], [0,1], [ 1,1]],
+  'm': [[-1, 0], [0, 0],[-1,1], [ 0,1]],
+  'n': [[ 0, 0], [0, 1], [1,0], [1,-1]],
+
+  'o': [[ 0,-2], [ 0,-1], [0, 0], [0,1], [ 0, 2]],
+  'p': [[-1,-1], [-1, 0], [0,-1], [0,0], [-1, 1]],
+  'q': [[ 0,-1], [ 0, 0], [0, 1], [0,2], [ 1, 2]],
+  'r': [[ 0,-1], [ 1,-1], [0, 0],[-1,0], [ 0, 1]],
+  's': [[-1,-1], [-1, 0], [0, 0], [0,1], [ 0, 2]],
+  't': [[-1,-1], [ 0,-1], [1,-1], [0,0], [ 0, 1]],
+  'u': [[-1, 0], [-1, 1], [0, 1], [1,1], [ 1, 0]],
+  'v': [[-1,-1], [-1, 0], [-1,1], [0,1], [ 1, 1]],
+  'w': [[-1,-1], [-1, 0], [0, 0], [0,1], [ 1, 1]],
+  'x': [[ 0,-1], [-1, 0], [0, 0], [1,0], [ 0, 1]],
+  'y': [[ 0,-1], [ 0, 0], [0, 1], [0,2], [-1, 0]],
+  'z': [[-1,-1], [ 0,-1], [0, 0], [0,1], [ 1, 1]],
+
+  '0': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1, 0]],
+  '1': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1,-1]],
+  '2': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  '3': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 1, 1], [ 1, 2]],
+  '4': [[-1,-1], [-1, 0], [ 0, 0], [1,-1], [ 1, 0], [ 1, 1]],
+  '5': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 1], [ 1, 0]],
+  '6': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 1, 0]],
+  '7': [[-2, 0], [-1, 0], [ 0, 0], [1, 0], [ 0, 1], [ 0, 2]],
+  '8': [[-1, 0], [-1, 1], [ 0,-1], [0, 0], [ 0, 1], [ 1, 0]],
+  '9': [[-1, 0], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 0]],
+  'A': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 1], [ 1,-1]],
+  'B': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-1], [ 1, 0], [ 1, 1]],
+  'C': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 2]],
+  'D': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1, 0], [ 1, 1]],
+  'E': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 0, 2]],
+  'F': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 1]],
+  'G': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-2], [ 1,-1], [ 1, 0]],
+  'H': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-2], [ 1,-1]],
+  'I': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 0, 3]],
+  'J': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-2]],
+  'K': [[-1, 0], [-1, 1], [ 0,-2], [0,-1], [ 0, 0], [ 1,-1]],
+  'L': [[-1,-2], [-1,-1], [-1, 0],[-1, 1], [ 0, 1], [ 1, 1]],
+  'M': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 1,-1]],
+  'N': [[-1, 0], [-1, 1], [-1, 2], [0, 0], [ 1,-1], [ 1, 0]],
+  'O': [[-1,-1], [-1, 0], [-1, 1], [0,-1], [ 0, 0], [ 0, 1]],
+  'P': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1,-1], [-1, 0]],
+  'Q': [[-1, 0], [-1, 1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  'R': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 0], [ 1,-1]],
+  'S': [[-1, 2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-1]],
+  'T': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-1]],
+  'U': [[-1,-1], [-1, 0], [-1, 1], [0,-1], [ 1,-1], [ 1, 0]],
+  'V': [[-1,-1], [-1, 0], [-1, 1], [0, 0], [ 0, 1], [ 1, 1]],
+  'W': [[-2, 1], [-1, 0], [-1, 1], [0,-1], [ 0, 0], [ 1,-1]],
+  'X': [[-1, 0], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1, 0]],
+  'Y': [[-1,-1], [-1, 0], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+};
+let nextPieceType = null;
+let bagContent = '';
+function initBricks()
+{
+  let deltaHue = 20
+  let hue = 0;
+  for (const x of Pieces) {
+    if (x === '0') { hue = -90; deltaHue = 11; }
+         if (Shapes[x].length === 6) Colors[x] = { 'H':hue, 'S':70, 'L':70 };
+    else if (Shapes[x].length === 5) Colors[x] = { 'H':hue, 'S':80, 'L':50 };
+    else                             Colors[x] = { 'H':hue, 'S':90, 'L':40 };
+    hue += deltaHue;
+  }
+  const params = window.location;
+  const sp = new URLSearchParams(params.search);
+  if (sp.has('bag')) bagContent = sp.get('bag');
+  if (sp.has('set')) {
+    for (const x of sp.get('set')) {
+           if (x === '4') bagContent += 'hijklmn';
+      else if (x === '5') bagContent += 'opqrstuvwxyz';
+      else if (x === '6') bagContent += '0123456789ABCDEFGHIJKLMNOPQRSTUVWXY';
+  } }
+  if (bagContent.length === 0) {
+      bagContent = 'hijklmnopqrstuvwxyz'+'0123456789ABCDEFGH'+
+                   'hijklmnopqrstuvwxyz'+ 'IJKLMNOPQRSTUVWXY';
+  }
+  speedUp = sp.has('su');
+  console.log(`bag=${bagContent};su=${speedUp}`);
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+function createMatrix(w, h)
+{
+  const         matrix =                       [];
+  while (h--) { matrix.push(new Array(w).fill(0)); }
+  return matrix;
+}
+function createPiece(type)
+{
+  const coords =       Shapes[type];
+  const matrix = createMatrix(6, 6);
+  coords.forEach(c => { matrix[c[1]+2][c[0]+2] = type; });
+  return matrix;
+}
+function drawMatrix(matrix, offset, isArena, ctx = context)
+{
+  matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        let H = Colors[value].H;
+        let S = Colors[value].S;
+        let L = Colors[value].L;
+        if (isArena) { S *= 0.4; L *= 1.2; }
+        ctx.fillStyle = `hsl(${H},${S}%,${L}%)`;
+        ctx.fillRect(x+offset.x, y+offset.y, 1, 1);
+
+        ctx.lineWidth = 0.05;
+        ctx.strokeStyle = `hsl(${H},${S}%,20%)`;
+        ctx.strokeRect(x+offset.x, y+offset.y, 1, 1);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillRect(x+offset.x, y+offset.y,     1, 0.1);
+        ctx.fillRect(x+offset.x, y+offset.y+0.1, 0.1, 1);
+      }
+      else {
+        ctx.lineWidth = 0.01;
+        ctx.strokeStyle = 'rgba(220,200,180,1)';
+        ctx.strokeRect(x+offset.x+0.1, y+offset.y+0.1, 0.8, 0.8);
+      }
+    });
+  });
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+initBricks();
+let Bricks = [ 'hijklmn ', 'opqrstuv', 'wxyz 012', '3456789A', 'BCDEFGHI',
+                                                   'JKLMNOPQ', 'RSTUVWXY' ];
+for (let i = 0; i < 7; i++) {
+  for (let j = 0; j < 8; j++) {
+    const pos = { x: 6*j, y: 6*i };
+    const bt = Bricks[i][j];
+    if (bt in Shapes) {
+      drawMatrix(createPiece(bt), pos, false);
+      context.fillStyle = 'black';
+      context.font = '1.2px sans-serif';
+      context.fillText(bt, pos.x, pos.y+1);
+      context.fillRect(pos.x+2.4 , pos.y+2.4, 0.2, 0.2);
+
+
+    }
+    else drawMatrix(createMatrix(6,6), pos, false);
+} }
+
+  </script>
+</body>
+</html>
