@@ -132,7 +132,7 @@ let lastTime = 0;        let speedUp    = false;
 let dropCounter = 0;     let isPaused   = false;
 let dropInterval = 1200; let isGameOver = false;
 
-const Pieces = 'hijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY';
+const Pieces = 'hijklmnopqrstuvwxyz123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const Colors = {};
 const Shapes = {
   'h': [[-1,-1], [-1,0], [0,0], [ 0,1]],
@@ -144,7 +144,7 @@ const Shapes = {
   'n': [[ 0, 0], [0, 1], [1,0], [1,-1]],
 
   'o': [[ 0,-2], [ 0,-1], [0, 0], [0,1], [ 0, 2]],
-  'p': [[-1,-1], [-1, 0], [0,-1], [0,0], [-1, 1]],
+  'p': [[ 0,-1], [ 0, 0], [0, 1], [1,0], [ 1,-1]],
   'q': [[ 0,-1], [ 0, 0], [0, 1], [0,2], [ 1, 2]],
   'r': [[ 0,-1], [ 1,-1], [0, 0],[-1,0], [ 0, 1]],
   's': [[-1,-1], [-1, 0], [0, 0], [0,1], [ 0, 2]],
@@ -156,7 +156,6 @@ const Shapes = {
   'y': [[ 0,-1], [ 0, 0], [0, 1], [0,2], [-1, 0]],
   'z': [[-1,-1], [ 0,-1], [0, 0], [0,1], [ 1, 1]],
 
-  '0': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1, 0]],
   '1': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [-1,-1]],
   '2': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
   '3': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 1, 1], [ 1, 2]],
@@ -170,27 +169,28 @@ const Shapes = {
   'B': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-1], [ 1, 0], [ 1, 1]],
   'C': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 2]],
   'D': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1, 0], [ 1, 1]],
-  'E': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 0, 2]],
+  'E': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1, 0]],
   'F': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 1]],
-  'G': [[ 0, 0], [ 0, 1], [ 0, 2], [1,-2], [ 1,-1], [ 1, 0]],
-  'H': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-2], [ 1,-1]],
+  'G': [[-1,-1], [-1, 0], [-1, 1], [0,-1], [ 0, 1], [ 0, 2]],
+  'H': [[ 0,-2], [ 0,-1], [ 0, 0], [1,-0], [ 1, 1], [ 1, 2]],
   'I': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 0, 3]],
   'J': [[ 0,-2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-2]],
-  'K': [[-1, 0], [-1, 1], [ 0,-2], [0,-1], [ 0, 0], [ 1,-1]],
+  'K': [[-1, 1], [-1, 2], [ 0,-1], [0, 0], [ 0, 1], [ 1, 0]],
   'L': [[-1,-2], [-1,-1], [-1, 0],[-1, 1], [ 0, 1], [ 1, 1]],
   'M': [[-1, 0], [-1, 1], [-1, 2], [0,-1], [ 0, 0], [ 1,-1]],
   'N': [[-1, 0], [-1, 1], [-1, 2], [0, 0], [ 1,-1], [ 1, 0]],
   'O': [[-1,-1], [-1, 0], [-1, 1], [0,-1], [ 0, 0], [ 0, 1]],
-  'P': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1,-1], [-1, 0]],
-  'Q': [[-1, 0], [-1, 1], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  'P': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [ 1,-1], [ 1, 0]],
+  'Q': [[-1,-1], [-1, 0], [ 0,-1], [0, 0], [ 0, 1], [ 1, 1]],
   'R': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1, 0], [ 1,-1]],
-  'S': [[-1, 2], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-1]],
+  'S': [[ 0,-1], [ 0, 0], [ 0, 1], [0, 2], [-1,-2], [-1,-1]],
   'T': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1,-1]],
   'U': [[-1,-1], [-1, 0], [-1, 1], [0,-1], [ 1,-1], [ 1, 0]],
   'V': [[-1,-1], [-1, 0], [-1, 1], [0, 0], [ 0, 1], [ 1, 1]],
   'W': [[-2, 1], [-1, 0], [-1, 1], [0,-1], [ 0, 0], [ 1,-1]],
   'X': [[-1, 0], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1, 0]],
   'Y': [[-1,-1], [-1, 0], [ 0, 0], [0, 1], [ 1,-1], [ 1, 0]],
+  'Z': [[-1,-1], [ 0,-1], [ 0, 0], [0, 1], [ 0, 2], [ 1, 2]],
 };
 let nextPieceType   = null;
 let nextPieceMatrix = null;
@@ -203,7 +203,7 @@ function initBricks()
   let deltaHue = 20
   let hue = 0;
   for (const x of Pieces) {
-    if (x === '0') { hue = -90; deltaHue = 11; }
+    if (x === '1') { hue = -90; deltaHue = 11; }
          if (Shapes[x].length === 6) Colors[x] = { 'H':hue, 'S':70, 'L':70 };
     else if (Shapes[x].length === 5) Colors[x] = { 'H':hue, 'S':80, 'L':50 };
     else                             Colors[x] = { 'H':hue, 'S':90, 'L':40 };
@@ -216,11 +216,11 @@ function initBricks()
     for (const x of sp.get('set')) {
            if (x === '4') bagContent += 'hijklmn';
       else if (x === '5') bagContent += 'opqrstuvwxyz';
-      else if (x === '6') bagContent += '0123456789ABCDEFGHIJKLMNOPQRSTUVWXY';
+      else if (x === '6') bagContent += '123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   } }
   if (bagContent.length === 0) {
-      bagContent = 'hijklmnopqrstuvwxyz'+'0123456789ABCDEFGH'+
-                   'hijklmnopqrstuvwxyz'+ 'IJKLMNOPQRSTUVWXY';
+      bagContent = '123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'+'hijklmnopqrstuvwxyz'
+                                                        +'hijklmnopqrstuvwxyz';
   }
   speedUp = sp.has('su');
   console.log(`bag=${bagContent};su=${speedUp}`);
@@ -448,13 +448,16 @@ function update(time = 0)
 }
 document.addEventListener('keydown', event =>
 {
+  const allSupportedKeycodes = [32,37,38,39,40,35,    8,
+                                   65,87,68,83,90,220,81,46];
   if (isGameOver) return;
   if (event.keyCode === 27 || event.keyCode === 112) { // ESC or F1
     togglePause();
     event.preventDefault(); return;
   }
-  else if (isPaused) { togglePause(); } // no return
-// - - - - - - - - - - - - - - - - - - - - - - - - -
+  else if (isPaused && allSupportedKeycodes.includes(event.keyCode))
+    togglePause();     // no return
+// - - - - - - - - - - - - - - - - - - - - - - - -
   if (event.keyCode === 32) { // Space (hard drop)
     while(!collide(arena, brick)) brick.pos.y++;
                                   brick.pos.y--;
