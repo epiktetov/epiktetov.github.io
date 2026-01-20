@@ -3,7 +3,7 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="UTF-8">
-  <title>Epiktetris</title><!-- Tue Jan 6 17:25 2026 -->
+  <title>Epiktetris</title><!-- Mon Jan 19 23:25 2026 -->
   <style>
     :root {
       --bg-color: #fff8f0; --text:   #000000;
@@ -24,14 +24,18 @@
       border:    2px solid #555;
     }
     #game-container {
-      display: flex;   position:   relative;
-      gap:     20px; background:    #e0e0e0;
-      padding: 20px; border: 4px solid #444;
+      display: flex; flex-direction: column; position: relative;
+      gap:     12px; background:    #e0e0e0;
+      padding: 12px; border: 4px solid #444;
       box-shadow: 0 0 20px rgba(0,0,0, 0.8);
+    }
+    #game-panel {
+      position: relative;
+      width: fit-content;
     }
     #ui-panel {
       display: flex;           gap:    15px;
-      flex-direction: column;  width: 150px;
+      flex-direction: column;  width: 100px;
     }
     .panel-box {
       background: var(--ui-bg);  padding:      10px;
@@ -46,8 +50,8 @@
        font-weight: bold; color: var(--accent);
     }
     .icon-large {
-      font-size: 1.5rem;  color: #3498db;
-      font-weight: bold;  line-height: 1;
+      font-size: 1.5rem;
+      font-weight: bold;
     }
     .key-hint {
       font-size: 0.7rem;
@@ -70,8 +74,34 @@
       text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
     }
     #overlay p {
-      font-size: 1.2rem;           color: #e0e0e0;
+      font-size: 0.8rem;           color: #e0e0e0;
       text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    }
+    #panel-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      min-width: 180px;
+    }
+    .control-btn {
+      flex: 1 1 auto;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #222;
+      background: #f7e4c6;
+      border: 2px solid #666;
+      border-radius: 10px;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+      height: 48px;
+      min-width: 60px;
+      touch-action: none;
+    }
+    .control-btn:active,
+    .control-btn.active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+      background: #f0d3a2;
     }
     .controls-hint {
       font-size: 0.8rem;  color:     #a0a0a0;
@@ -79,41 +109,45 @@
     }
     .game-hint {
       font-family: Consolas, Menlo, Monaco, monospace;
-      font-size: 0.8rem;           color:     #a0a0a0;
-      margin-top:  10px;           text-align: center;
+      font-size: 0.8rem;
+      color:    #808080;  text-align: center;
     }
   </style>
 </head>
 <body>
   <div id="game-container" tabindex="-1">
-    <canvas id="tetris" width="300" height="600"></canvas>
-    <div id="ui-panel">
-      <div class="panel-box">
-        <h2>Next</h2>
-        <canvas id="next" width="100" height="120"></canvas>
+    <div id="panel-row">
+      <div id="game-panel">
+        <canvas id="tetris" width="240" height="500"></canvas>
+        <div id="overlay">
+          <h1 id="overlay-title">PAUSED</h1>
+          <p id="overlay-msg">...</p>
+        </div>
       </div>
-      <div class="panel-box">
-        <h2>Swap</h2>
-        <div class="key-hint">Press Q</div>
+      <div id="ui-panel">
+        <button class="control-btn" data-action="pause">
+                <div class="icon-large">⏸</div></button>
+        <div class="game-hint" id="next-type">X</div>
+        <div class="panel-box">
+          <h2>Next</h2>
+          <canvas id="next" width="72" height="72"></canvas>
+        </div>
+        <button class="control-btn" data-action="swap">Swap</button>
+        <button class="control-btn" data-action="mirror" id="mirror-btn">
+                 <div class="icon-large">⇄</div></button>
+        <button class="control-btn" data-action="rotate-left">
+                      <div class="icon-large">↺</div></button>
+        <div class="panel-box">
+          <h2>Score</h2>
+          <div id="score" class="value">0</div>
+        </div>
       </div>
-      <div class="panel-box" id="mirror-box">
-        <h2>Mirror / flip</h2>
-        <div class="icon-large">⇄</div>
-        <div class="key-hint">Press Z</div>
-      </div>
-      <div class="panel-box">
-        <h2>Score</h2>
-        <div id="score" class="value">0</div>
-      </div>
-      <div class="panel-box">
-        <h2>Level</h2>
-        <div id="level" class="value">1</div>
-      </div>
-      <div class="game-hint" id="next-type">X</div>
     </div>
-    <div id="overlay">
-      <h1 id="overlay-title">PAUSED</h1>
-      <p id="overlay-msg">...</p>
+    <div id="panel-row">
+      <button class="control-btn" data-action="left">◀</button>
+      <button class="control-btn" data-action="right">▶</button>
+      <button class="control-btn" data-action="down">▼</button>
+      <button class="control-btn" data-action="drop">Drop</button>
     </div>
   </div>
   <div class="controls-hint">
@@ -125,8 +159,8 @@ const canvas      = document.getElementById('tetris');
 const nextCanvas  = document.getElementById('next');
 const context     =     canvas.getContext('2d');
 const nextContext = nextCanvas.getContext('2d');
-const COLS = 12;          context.scale(25, 25);
-const ROWS = 24;      nextContext.scale(20, 20);
+const COLS = 12;          context.scale(20, 20);
+const ROWS = 25;      nextContext.scale(12, 12);
 let score   = 0;
 let lastTime = 0;        let speedUp    = false;
 let canMirror = true;    let drawGhost  = false; let tempGhost  = false;
@@ -230,7 +264,7 @@ function nextPieceFromBag()
 {
   if (Bag.length === 0) {
     const shuffle = str => [...str].sort(() => Math.random()-0.5).join('');
-    Bag = shuffle(bagContent);                        bagCount++;
+    Bag = shuffle(bagContent);     if (bagCount < 99) bagCount++;
     if (speedUp) dropInterval = Math.max(250,1250-(50*bagCount));
   }
   const nextPiece = Bag[0];
@@ -262,7 +296,7 @@ function drawMatrix(matrix, offset, bt, ctx = context)
     row.forEach((value, x) => {     //   0:regular
       if (value !== 0) {            //   1:arena
         let H = Colors[value].H;    //   2:ghost
-        let S = Colors[value].S;
+        let S = Colors[value].S;    //   3:next
         let L = Colors[value].L;
         if (bt == 2) {
           ctx.fillStyle = `hsl(${H},100%,50%,0.125)`;
@@ -281,8 +315,8 @@ function drawMatrix(matrix, offset, bt, ctx = context)
           ctx.fillRect(x+offset.x, y+offset.y,     1, 0.1);
           ctx.fillRect(x+offset.x, y+offset.y+0.1, 0.1, 1);
       } }
-      else {
-        ctx.lineWidth = 0.01;
+      else if (bt & 1) {
+        ctx.lineWidth = (bt == 1) ? 0.02 : 0.01;
         ctx.strokeStyle = 'rgba(220,200,180,1)';
         ctx.strokeRect(x+offset.x+0.1, y+offset.y+0.1, 0.8, 0.8);
       }
@@ -308,10 +342,9 @@ function drawNext()
 {
   nextContext.fillStyle = '#ffffff';
   nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
-  drawMatrix(nextPieceMatrix, {x: 0, y: 0}, 0, nextContext);
-  let bagHint = Bag;
-  if (bagHint.length > 9) bagHint = bagHint.slice(0,8)+"..";
-  const hints = `${brick.type}(${nextPieceType})${bagHint}`;
+  drawMatrix(nextPieceMatrix, {x: 0, y: 0}, 3, nextContext);
+  let hints = `${bagCount}:${brick.type}(${nextPieceType})${Bag}`;
+  if (hints.length > 10) hints = hints.slice(0, 9) + "…";
   document.getElementById('next-type').innerText = hints;
 }
 function collide(arena, brick)
@@ -376,9 +409,9 @@ function brickMirror()
 }
 function updateCanMirror()
 {
-  canMirror =            (Shapes[brick.type].length > 4);
-  const panelBox = document.getElementById('mirror-box');
-  panelBox.style.opacity =    canMirror ? '1.0' : '0.25';
+  canMirror =          (Shapes[brick.type].length > 4);
+  const button = document.getElementById('mirror-btn');
+  button.style.opacity =    canMirror ? '1.0' : '0.25';
 }
 function brickSwap()
 {
@@ -422,7 +455,7 @@ function brickReset()
     isGameOver = true;
     const overlay = document.getElementById('overlay');
     document.getElementById('overlay-title').innerText = "GAME OVER";
-    document.getElementById('overlay-msg').innerText = "Use 'Reload Page' command (F5 or ⌘R) to restart";
+    document.getElementById('overlay-msg').innerText = "Reload page to restart";
     overlay.style.display = 'flex';
     overlay.style.background = 'rgba(0,0,0, 0.5)';  return;
   }
@@ -435,10 +468,8 @@ outer:
     const row = arena.splice(y, 1)[0].fill(0);
     arena.unshift(row);    ++y;    rowCount++;
   }
-  if (rowCount > 0) score += rowCount;
-
+  if (rowCount > 0)                score += rowCount;
   document.getElementById('score').innerText = score;
-  document.getElementById('level').innerText = bagCount;
 }
 function togglePause()
 {
@@ -464,14 +495,139 @@ function update(time = 0)
   draw();
   requestAnimationFrame(update);
 }
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+function canAct()
+{
+  if (isGameOver)              return false;
+  if (isPaused) togglePause(); return  true;
+}
+function moveLeft()
+{
+  if (canAct()) {              brick.pos.x--;
+    if (collide(arena, brick)) brick.pos.x++;
+} }
+function moveRight()
+{
+  if (canAct()) {              brick.pos.x++;
+    if (collide(arena, brick)) brick.pos.x--;
+} }
+function softDrop()
+{
+  if (canAct()) {
+    tempGhost = true;
+    ghostCounter = 0; brickDrop();
+} }
+function hardDrop()
+{
+  if (canAct()) {
+    while(!collide(arena, brick)) brick.pos.y++;
+                                  brick.pos.y--;
+    merge(arena, brick);
+    dropCounter =     0; brickReset();
+} }
+function rotateLeft()  { if (canAct()) brickRotate(-1); }
+function doSwap()      { if (canAct()) brickSwap();     }
+function doMirror()    { if (canAct()) brickMirror();   }
+const actionHandlers = {
+  left:          moveLeft,
+  right:         moveRight,
+  down:          softDrop,
+  drop:          hardDrop,
+  'rotate-left': rotateLeft,
+  swap:          doSwap,
+  mirror:        doMirror,
+  pause:         togglePause,
+};
+const repeatableActions = new Set(['left', 'right', 'down']);
+let repeatButton   = null;
+let repeatTimer    = null;
+let repeatInterval = null;
+function clearRepeat()
+{
+  if (repeatButton) repeatButton.classList.remove('active');
+                                                     repeatButton   = null;
+  if (repeatTimer)    clearTimeout (repeatTimer);    repeatTimer    = null;
+  if (repeatInterval) clearInterval(repeatInterval); repeatInterval = null;
+}
+function startRepeat(action, button)
+{
+  clearRepeat();
+  const handler = actionHandlers[action];
+  if (handler) { handler();
+    repeatButton =  button;
+    repeatButton.classList.add('active');
+    repeatTimer = setTimeout(() =>
+        { repeatInterval = setInterval(handler,80); }, 200);
+} }
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+const mobileControls = document.getElementById('game-container');
+if (mobileControls) {
+  mobileControls.addEventListener('pointerdown', event => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const action = button.dataset.action;
+    event.preventDefault();
+    if (repeatableActions.has(action)) {
+      startRepeat(action, button);
+    }
+    else {
+      const handler = actionHandlers[action];
+      if (handler) handler();
+      button.classList.add('active');
+      setTimeout(() => button.classList.remove('active'), 120);
+    }
+  });
+  const stopRepeat = event => {
+    event.preventDefault();
+    clearRepeat();
+  };
+  mobileControls.addEventListener('pointerup', stopRepeat);
+  mobileControls.addEventListener('pointercancel', stopRepeat);
+  mobileControls.addEventListener('pointerleave', stopRepeat);
+}
+const swipeThreshold = 30;
+let touchStartX = null;
+let touchStartY = null;
+canvas.addEventListener('touchstart', event => {
+  if (event.touches.length !== 1) return;
+  const t = event.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+  event.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchmove', event => {
+  if (touchStartX === null || touchStartY === null) return;
+  event.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchend', event => {
+  if (touchStartX === null || touchStartY === null) return;
+  const t = event.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  touchStartX = null;
+  touchStartY = null;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+  if (absX < swipeThreshold && absY < swipeThreshold) return;
+  if (absX > absY) {
+    if (dx > 0) moveRight();
+    else        moveLeft();
+  }
+  else {
+    if (dy > 0) softDrop();
+    else        rotateRight();
+  }
+  event.preventDefault();
+}, { passive: false });
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 document.addEventListener('keydown', event =>
 {
   const allSupportedKeycodes = [32,37,38,39,40,35,    8,
                                    65,87,68,83,90,220,81,46];
   if (isGameOver) return;
-  if (event.keyCode === 17) { // Ctrl
-    drawGhost = true;
-    draw();   return;
+  if (event.keyCode === 88) { // X
+    drawGhost = !drawGhost;
+    draw();         return;
   }
   else if (event.keyCode === 27 || event.keyCode === 112) { // ESC or F1
     togglePause();
@@ -479,16 +635,9 @@ document.addEventListener('keydown', event =>
   }
   else if (isPaused && allSupportedKeycodes.includes(event.keyCode))
     togglePause();     // no return
-// - - - - - - - - - - - - - - - - - - - - - - - -
-  if (event.keyCode === 32) { // Space (hard drop)
-    while(!collide(arena, brick)) brick.pos.y++;
-                                  brick.pos.y--;
-    merge(arena, brick);
-    brickReset();
-    dropCounter = 0;
-  }
-  else if (event.keyCode === 37    // Left
-        || event.keyCode === 65) { // A
+// - - - - - - - - - - - - - - - - - -
+  if  (event.keyCode === 37    // Left
+    || event.keyCode === 65) { // A
     brick.pos.x--;
     if (collide(arena, brick)) brick.pos.x++;
   }
@@ -504,9 +653,7 @@ document.addEventListener('keydown', event =>
   }
   else if (event.keyCode === 40    // Down
         || event.keyCode === 83) { // S
-    tempGhost = true;
-    ghostCounter = 0;
-    brickDrop();
+    softDrop();
     event.preventDefault();
   }
   else if (event.keyCode === 35     // End
@@ -521,11 +668,12 @@ document.addEventListener('keydown', event =>
     brickSwap();
     event.preventDefault();
   }
+  else if (event.keyCode === 32) { hardDrop(); } // Space
 });
-document.addEventListener('keyup', event =>
-{
-  if (event.keyCode === 17) { drawGhost = false; draw(); }
-});
+// document.addEventListener('keyup', event =>
+// {
+//   if (event.keyCode === 17) { drawGhost = false; draw(); }
+// });
 initBricks();
 brickReset(); update();
 
