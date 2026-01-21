@@ -3,7 +3,7 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="UTF-8">
-  <title>Epiktetris</title><!-- Mon Jan 19 23:25 2026 -->
+  <title>Epiktetris</title><!-- Tue Jan 20 20:26 2026 -->
   <style>
     :root {
       --bg-color: #fff8f0; --text:   #000000;
@@ -257,8 +257,9 @@ function initBricks()
       bagContent = '123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'+'hijklmnopqrstuvwxyz'
                                                         +'hijklmnopqrstuvwxyz';
   }
-  speedUp = sp.has('su');
-  console.log(`bag=${bagContent};su=${speedUp}`);
+  speedUp   = sp.has('su');
+  drawGhost = sp.has('gp');
+  console.log(`bag=${bagContent};su=${speedUp};gp=${drawGhost}`);
 }
 function nextPieceFromBag()
 {
@@ -615,7 +616,7 @@ canvas.addEventListener('touchend', event => {
   }
   else {
     if (dy > 0) softDrop();
-    else        rotateRight();
+    else        rotateLeft();
   }
   event.preventDefault();
 }, { passive: false });

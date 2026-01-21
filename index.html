@@ -9,11 +9,11 @@
       font-family: Arial, Helvetica, Verdana, sans-serif;
       background-color: #fff8f0;
       padding:          20px;
-      box-sizing: border-box; // includes padding in the width calculation
+      box-sizing: border-box; /* includes padding in the width calculation */
     }
     .container {
       max-width: 1000px; justify-content: center;
-      margin: 20px auto;          paddding: 20px;
+      margin: 20px auto;           padding: 20px;
       display:     flex;     flex-direction: row;
     }
     .sidebar { margin-right: 20px; }
@@ -21,6 +21,10 @@
     h1 {
       margin-top: 0;
       text-align: right; color: #999060;
+    }
+    @media (max-width: 700px) {
+      .sidebar   { display: none;     }
+      .container { margin: 10px auto; }
     }
     .grey { color: #707070; }
   </style>
@@ -54,9 +58,10 @@
       <tt>5</tt>&nbsp;(adds 12 reversible pentominoes) and
       <tt>6</tt>&nbsp;(adds 35 reversible hexominoes)
       </p>
-      <form action="epiktetris.html">
+      <form action="epiktetris.html" target="_blank">
         <input type="text" name="set" value="65544"><br><br>
-        <input type="checkbox" name="su"> increase drop speed with level<br><br>
+        <input type="checkbox" name="su"> increase drop speed with level<br>
+        <input type="checkbox" name="gp"> show ghost at drop location<br><br>
         <input type="submit" value="Play">
       </form>
       <p class="grey"><b>Reference:</b> <a href="polyominoes.html">names</a>
